@@ -1,0 +1,453 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Planning énergie · sept → déc 2026</title>
+<style>
+  :root{
+    --paper:#ECE9F1; --paper-2:#F6F4F9; --ink:#231E33; --ink-2:#5F587A; --line:#D3CDE0;
+    --regles:#B5443C; --montante:#5B8E68; --pic:#D2A43C; --stable:#C67A36; --creux:#7A5299;
+    --today:#231E33;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--paper);color:var(--ink);
+    font-family:"Iowan Old Style","Palatino Linotype",Palatino,"Book Antiqua",Georgia,serif;font-size:16px;line-height:1.45}
+  button,input,textarea,select{font:inherit;color:inherit}
+  button{cursor:pointer;background:none;border:1px solid var(--line);border-radius:999px;padding:.35rem .9rem}
+  button:hover{background:var(--paper-2)}
+  button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+  button.on{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+
+  header{padding:1.4rem 1.4rem .6rem;display:flex;flex-wrap:wrap;gap:.8rem 1.4rem;align-items:flex-end;justify-content:space-between}
+  h1{margin:0;font-weight:400;font-size:1.9rem;letter-spacing:-.01em;line-height:1.1}
+  h1 small{display:block;font-size:.95rem;color:var(--ink-2);margin-top:.25rem}
+  .controls{display:flex;flex-wrap:wrap;gap:.5rem;align-items:center}
+  .nav{display:flex;align-items:center;gap:.25rem}
+  .nav .label{min-width:9.5rem;text-align:center;font-size:1.05rem}
+  .nav button{padding:.3rem .7rem}
+
+  .legend{display:flex;flex-wrap:wrap;gap:.4rem 1.1rem;padding:0 1.4rem .8rem;font-size:.9rem;color:var(--ink-2)}
+  .legend span::before{content:"";display:inline-block;width:.75rem;height:.75rem;border-radius:2px;margin-right:.4rem;vertical-align:-1px;background:var(--c)}
+
+  main{padding:0 1.4rem 2rem}
+
+  /* ---------- month ---------- */
+  .month{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+  .month .dow{font-size:.8rem;color:var(--ink-2);padding:.2rem .4rem}
+  .cell{background:var(--paper-2);border-radius:6px;min-height:6.2rem;padding:0;display:flex;flex-direction:column;overflow:hidden;position:relative;border:1px solid transparent}
+  .cell.out{opacity:.35}
+  .cell.today{border-color:var(--today)}
+  .cell .band{height:6px;background:var(--c)}
+  .cell .top{display:flex;justify-content:space-between;align-items:baseline;padding:.3rem .45rem 0}
+  .cell .num{font-size:1.05rem}
+  .cell .moon{font-size:.95rem}
+  .cell .astro{font-size:.72rem;color:var(--ink-2);padding:0 .45rem;line-height:1.25}
+  .cell .tasks{padding:.25rem .45rem .4rem;font-size:.78rem;display:flex;flex-direction:column;gap:2px;flex:1}
+  .cell .t{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .cell .t.done{text-decoration:line-through;color:var(--ink-2)}
+  .cell .t::before{content:"";display:inline-block;width:5px;height:5px;border-radius:50%;background:var(--ink-2);margin-right:.35rem;vertical-align:1px}
+  .cell button.open{position:absolute;inset:0;border:0;border-radius:6px;background:transparent;padding:0}
+  .cell button.open:hover{background:rgba(35,30,51,.04)}
+
+  .monthgoal{margin:.9rem 0 1rem;display:grid;grid-template-columns:1fr;gap:.4rem}
+  .monthgoal label{font-size:.9rem;color:var(--ink-2)}
+  textarea{width:100%;min-height:3.2rem;resize:vertical;background:var(--paper-2);border:1px solid var(--line);border-radius:6px;padding:.6rem .7rem}
+
+  /* ---------- week ---------- */
+  .week{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+  .day{background:var(--paper-2);border-radius:8px;overflow:hidden;display:flex;flex-direction:column;min-height:20rem;border:1px solid transparent}
+  .day.today{border-color:var(--today)}
+  .day .band{height:8px;background:var(--c)}
+  .day .head{padding:.6rem .7rem .3rem}
+  .day .head .d{font-size:1.15rem}
+  .day .head .d span{color:var(--ink-2);font-size:.85rem;margin-left:.3rem}
+  .day .head .phase{font-size:.8rem;color:var(--c);filter:brightness(.8)}
+  .day .head .hint{font-size:.78rem;color:var(--ink-2);line-height:1.3;margin-top:.15rem}
+  .day .head .astro{font-size:.78rem;margin-top:.25rem}
+  .day ul{list-style:none;margin:0;padding:.3rem .5rem;display:flex;flex-direction:column;gap:.25rem;flex:1}
+  .day li{display:flex;gap:.4rem;align-items:flex-start;font-size:.9rem;padding:.25rem .3rem;border-radius:4px;cursor:grab}
+  .day li:hover{background:rgba(35,30,51,.05)}
+  .day li.dragging{opacity:.4}
+  .day li .handle{color:var(--ink-2);font-size:.85rem;line-height:1.5;cursor:grab;user-select:none}
+  .day li input[type=checkbox]{margin-top:.28rem;accent-color:var(--ink)}
+  .day li .txt{flex:1;word-break:break-word}
+  .day li.done .txt{text-decoration:line-through;color:var(--ink-2)}
+  .day li .del{border:0;padding:0 .3rem;color:var(--ink-2);opacity:0;font-size:1rem;line-height:1}
+  .day li:hover .del,.day li:focus-within .del{opacity:1}
+  .day ul{min-height:1rem}
+  .day ul.dragover{background:rgba(35,30,51,.06);outline:1px dashed var(--line);border-radius:6px}
+  .cell .t[draggable]{cursor:grab}
+  .cell.dragover{outline:2px dashed var(--ink);outline-offset:-2px}
+  .cell .t.more{cursor:default}
+  .day .add{display:flex;padding:.4rem .5rem .6rem}
+  .day .add input{flex:1;border:0;border-bottom:1px solid var(--line);background:transparent;padding:.3rem .2rem;font-size:.9rem}
+  .day .add input::placeholder{color:var(--ink-2);opacity:.7}
+
+  /* ---------- settings ---------- */
+  .settings{display:none;margin:0 1.4rem 1rem;padding:.9rem 1.1rem;background:var(--paper-2);border-radius:8px;gap:1rem 1.6rem;flex-wrap:wrap;align-items:flex-end}
+  .settings.show{display:flex}
+  .settings label{display:flex;flex-direction:column;gap:.25rem;font-size:.9rem;color:var(--ink-2)}
+  .settings input{background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:.4rem .6rem;color:var(--ink);width:10rem}
+  .settings p{margin:0;font-size:.85rem;color:var(--ink-2);flex-basis:100%}
+  .status{font-size:.8rem;color:var(--ink-2);padding:0 1.4rem .6rem;min-height:1.2rem}
+
+  @media (max-width:860px){
+    .week{grid-template-columns:1fr}
+    .day{min-height:0}
+    .month .cell{min-height:4.4rem}
+    .cell .tasks{display:none}
+    .cell .astro{display:none}
+    header{padding:1rem 1rem .5rem}
+    .legend,main,.settings,.status{padding-left:1rem;padding-right:1rem}
+    .settings{margin:0 1rem 1rem}
+  }
+  @media (prefers-reduced-motion:no-preference){
+    .cell,.day{transition:border-color .15s}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Planning énergie<small id="subtitle">Cycle, Lune et tâches — septembre à décembre 2026 · planning partagé, visible par toute personne ayant ce lien</small></h1>
+  <div class="controls">
+    <div class="nav">
+      <button id="prev" aria-label="Précédent">‹</button>
+      <div class="label" id="navLabel"></div>
+      <button id="next" aria-label="Suivant">›</button>
+    </div>
+    <button id="todayBtn">Aujourd'hui</button>
+    <button id="viewMonth" class="on">Mois</button>
+    <button id="viewWeek">Semaine</button>
+    <button id="settingsBtn">Mon cycle</button>
+  </div>
+</header>
+
+<div class="legend">
+  <span style="--c:var(--regles)">Règles — repos</span>
+  <span style="--c:var(--montante)">Montante — lancer, créer</span>
+  <span style="--c:var(--pic)">Pic — scène, rendez-vous, négocier</span>
+  <span style="--c:var(--stable)">Stable / déclin — finaliser, admin</span>
+  <span style="--c:var(--creux)">Creux — ralentir</span>
+  <span style="--c:transparent;border:1px solid var(--line)">🌑 nouvelle lune · 🌕 pleine lune · ☿ Mercure rétro</span>
+</div>
+
+<section class="settings" id="settings" aria-label="Paramètres du cycle">
+  <label>Premier jour des dernières règles
+    <input type="date" id="setStart">
+  </label>
+  <label>Durée du cycle (jours)
+    <input type="number" id="setLen" min="21" max="40">
+  </label>
+  <label>Durée des règles (jours)
+    <input type="number" id="setPeriod" min="2" max="10">
+  </label>
+  <button id="saveSettings">Enregistrer</button>
+  <p>Quand tes règles arrivent réellement, mets à jour la date ici : tout le planning se recale.</p>
+</section>
+<div class="status" id="status"></div>
+
+<main id="main"></main>
+
+<script>
+(() => {
+  // ---------- state ----------
+  const KEY = 'hemsi_planning_energie_v1';
+  const MONTHS = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
+  const DOW = ['lun','mar','mer','jeu','ven','sam','dim'];
+  const DOW_LONG = ['lundi','mardi','mercredi','jeudi','vendredi','samedi','dimanche'];
+
+  let state = {
+    settings: { start: '2026-08-29', cycleLen: 28, periodLen: 5 },
+    tasks: [],          // {id, date:'YYYY-MM-DD', text, done}
+    goals: {}           // {'2026-09': 'texte'}
+  };
+  let view = 'month';
+  let cursor = startOfDay(new Date());
+  let memoryOnly = false;
+
+  // ---------- astro data (heure d'Europe) ----------
+  const NEW_MOON = { '2026-09-11':'Vierge', '2026-10-10':'Balance', '2026-11-09':'Scorpion', '2026-12-09':'Sagittaire' };
+  const FULL_MOON = { '2026-08-28':'Poissons · éclipse partielle', '2026-09-26':'Bélier', '2026-10-26':'Taureau', '2026-11-24':'Gémeaux', '2026-12-24':'Capricorne · super lune' };
+  const EVENTS = { '2026-09-22':'Équinoxe d\'automne', '2026-12-21':'Solstice d\'hiver' };
+  const MERC_RETRO = ['2026-10-24','2026-11-13'];
+  const VENUS_RETRO = ['2026-10-03','2026-11-13'];
+
+  const PHASES = {
+    regles:   { name:'Règles',          css:'var(--regles)',   hint:'Tâches légères, repos, tri.' },
+    montante: { name:'Montante',        css:'var(--montante)', hint:'Lancer un projet, créer, apprendre.' },
+    pic:      { name:'Pic',             css:'var(--pic)',      hint:'Scène, rendez-vous clés, négociations.' },
+    stable:   { name:'Stable / déclin', css:'var(--stable)',   hint:'Finaliser, admin, organisation.' },
+    creux:    { name:'Creux',           css:'var(--creux)',    hint:'Ralentir, éviter les grosses échéances.' }
+  };
+
+  // ---------- helpers ----------
+  function startOfDay(d){ return new Date(d.getFullYear(), d.getMonth(), d.getDate()); }
+  function iso(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+  function parse(s){ const [y,m,d]=s.split('-').map(Number); return new Date(y,m-1,d); }
+  function addDays(d,n){ const x=new Date(d); x.setDate(x.getDate()+n); return x; }
+  function daysBetween(a,b){ return Math.round((startOfDay(b)-startOfDay(a))/86400000); }
+  function mondayOf(d){ const x=startOfDay(d); const wd=(x.getDay()+6)%7; return addDays(x,-wd); }
+  function inRange(s, range){ return s>=range[0] && s<=range[1]; }
+
+  function phaseOf(d){
+    const { start, cycleLen, periodLen } = state.settings;
+    const L = Number(cycleLen), P = Number(periodLen);
+    const diff = daysBetween(parse(start), d);
+    const day = ((diff % L) + L) % L + 1;
+    const ov = L - 14;                // ovulation ≈ 14 jours avant les règles suivantes
+    if (day <= P) return 'regles';
+    if (day < ov) return 'montante';
+    if (day <= ov + 3) return 'pic';
+    if (day <= L - 5) return 'stable';
+    return 'creux';
+  }
+
+  function astroOf(d){
+    const s = iso(d); const out = [];
+    if (NEW_MOON[s]) out.push('🌑 Nouvelle lune en ' + NEW_MOON[s]);
+    if (FULL_MOON[s]) out.push('🌕 Pleine lune en ' + FULL_MOON[s]);
+    if (EVENTS[s]) out.push(EVENTS[s]);
+    if (inRange(s, MERC_RETRO)) out.push('☿ Mercure rétrograde');
+    if (inRange(s, VENUS_RETRO)) out.push('♀ Vénus rétrograde');
+    return out;
+  }
+  function moonGlyph(d){ const s=iso(d); return NEW_MOON[s] ? '🌑' : FULL_MOON[s] ? '🌕' : ''; }
+
+  // ---------- storage ----------
+  // Stockage PARTAGÉ : toute personne qui ouvre ce lien voit et modifie les mêmes tâches.
+  const SHARED = true;
+  async function load(){
+    try{
+      if (!window.storage) throw new Error('no storage');
+      const r = await window.storage.get(KEY, SHARED);
+      if (r && r.value){ const v = JSON.parse(r.value); state = Object.assign(state, v); }
+    }catch(e){
+      if (!window.storage) { memoryOnly = true; }
+    }
+    setStatus(memoryOnly ? 'Sauvegarde indisponible ici : les tâches restent le temps de la session.' : '');
+  }
+  let saveTimer;
+  function save(){
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(async () => {
+      if (memoryOnly) return;
+      try{
+        const r = await window.storage.set(KEY, JSON.stringify(state), SHARED);
+        if (!r) setStatus('La sauvegarde a échoué. Réessaie dans un instant.');
+        else setStatus('Enregistré.', 1200);
+      }catch(e){ setStatus('La sauvegarde a échoué. Réessaie dans un instant.'); }
+    }, 300);
+  }
+  let statusTimer;
+  function setStatus(msg, ttl){
+    clearTimeout(statusTimer);
+    document.getElementById('status').textContent = msg;
+    if (ttl) statusTimer = setTimeout(()=>{ document.getElementById('status').textContent=''; }, ttl);
+  }
+
+  // ---------- tasks ----------
+  function tasksOn(s){ return state.tasks.filter(t=>t.date===s).sort((a,b)=>(a.order||0)-(b.order||0)); }
+  function nextOrder(date){ const on = state.tasks.filter(t=>t.date===date); return on.length ? Math.max(...on.map(t=>t.order||0))+1 : 0; }
+  function addTask(date, text){
+    text = text.trim(); if(!text) return;
+    state.tasks.push({ id: Date.now()+'_'+Math.random().toString(36).slice(2,7), date, text, done:false, order: nextOrder(date) });
+    save(); render();
+  }
+  function toggleTask(id){ const t=state.tasks.find(t=>t.id===id); if(t){ t.done=!t.done; save(); render(); } }
+  function deleteTask(id){ state.tasks = state.tasks.filter(t=>t.id!==id); save(); render(); }
+  function moveTask(id, newDate, beforeId){
+    const t = state.tasks.find(t=>t.id===id); if(!t) return;
+    t.date = newDate;
+    const siblings = state.tasks.filter(x=>x.date===newDate && x.id!==id).sort((a,b)=>(a.order||0)-(b.order||0));
+    const idx = beforeId ? siblings.findIndex(s=>s.id===beforeId) : -1;
+    if (idx === -1){ t.order = siblings.length ? Math.max(...siblings.map(s=>s.order||0))+1 : 0; }
+    else {
+      // insert before siblings[idx]: renumber this local run so order stays sane
+      siblings.splice(idx, 0, t);
+      siblings.forEach((s,i)=>{ s.order = i; });
+    }
+    save(); render();
+  }
+
+  // ---------- render ----------
+  const main = document.getElementById('main');
+  const today = iso(new Date());
+
+  function render(){
+    document.getElementById('viewMonth').classList.toggle('on', view==='month');
+    document.getElementById('viewWeek').classList.toggle('on', view==='week');
+    view==='month' ? renderMonth() : renderWeek();
+  }
+
+  function renderMonth(){
+    const y=cursor.getFullYear(), m=cursor.getMonth();
+    document.getElementById('navLabel').textContent = MONTHS[m]+' '+y;
+    const first = new Date(y,m,1);
+    const gridStart = mondayOf(first);
+    const key = y+'-'+String(m+1).padStart(2,'0');
+
+    let html = '<div class="monthgoal"><label for="goal">Objectifs du mois</label>'
+      + '<textarea id="goal" placeholder="Ce que tu veux avoir fait à la fin du mois…">'+esc(state.goals[key]||'')+'</textarea></div>';
+    html += '<div class="month">' + DOW.map(d=>'<div class="dow">'+d+'</div>').join('');
+    for(let i=0;i<42;i++){
+      const d = addDays(gridStart,i);
+      if (i>=35 && d.getMonth()!==m) break;
+      const s = iso(d), ph = PHASES[phaseOf(d)], astro = astroOf(d).filter(a=>!a.startsWith('☿')&&!a.startsWith('♀'));
+      const tasks = tasksOn(s);
+      const merc = inRange(s,MERC_RETRO) ? '<span title="Mercure rétrograde">☿</span>' : '';
+      html += '<div class="cell'+(d.getMonth()!==m?' out':'')+(s===today?' today':'')+'" style="--c:'+ph.css+'" title="'+ph.name+' — '+ph.hint+'">'
+        + '<div class="band"></div>'
+        + '<div class="top"><span class="num">'+d.getDate()+'</span><span class="moon">'+merc+moonGlyph(d)+'</span></div>'
+        + (astro.length ? '<div class="astro">'+astro.map(a=>esc(a.replace(/^🌑 |^🌕 /,''))).join('<br>')+'</div>' : '')
+        + '<div class="tasks" data-date="'+s+'">'+tasks.slice(0,3).map(t=>'<div class="t'+(t.done?' done':'')+'" draggable="true" data-id="'+t.id+'">'+esc(t.text)+'</div>').join('')
+        + (tasks.length>3?'<div class="t more">+'+(tasks.length-3)+' autres</div>':'')+'</div>'
+        + '<button class="open" data-date="'+s+'" aria-label="Ouvrir la semaine du '+s+'"></button>'
+        + '</div>';
+    }
+    html += '</div>';
+    main.innerHTML = html;
+    main.querySelectorAll('.open').forEach(b=>b.addEventListener('click',e=>{
+      if (e.target.closest('.t')) return; // clicking a task chip shouldn't navigate
+      cursor=parse(b.dataset.date); view='week'; render();
+    }));
+    const goal = document.getElementById('goal');
+    goal.addEventListener('input', ()=>{ state.goals[key]=goal.value; save(); });
+    attachMonthDragHandlers();
+  }
+
+  // ---------- drag & drop (month view: move task chip to another day) ----------
+  function attachMonthDragHandlers(){
+    let dragId = null;
+    main.querySelectorAll('.cell .t[draggable]').forEach(chip=>{
+      chip.addEventListener('dragstart', e=>{
+        dragId = chip.dataset.id;
+        e.dataTransfer.effectAllowed = 'move';
+        try{ e.dataTransfer.setData('text/plain', dragId); }catch(err){}
+        e.stopPropagation();
+      });
+    });
+    main.querySelectorAll('.cell').forEach(cell=>{
+      cell.addEventListener('dragover', e=>{ e.preventDefault(); e.dataTransfer.dropEffect='move'; cell.classList.add('dragover'); });
+      cell.addEventListener('dragleave', ()=> cell.classList.remove('dragover'));
+      cell.addEventListener('drop', e=>{
+        e.preventDefault();
+        cell.classList.remove('dragover');
+        const id = dragId || e.dataTransfer.getData('text/plain');
+        const date = cell.querySelector('.open')?.dataset.date;
+        if (id && date) moveTask(id, date, null);
+        dragId = null;
+      });
+    });
+  }
+
+  function renderWeek(){
+    const mon = mondayOf(cursor), sun = addDays(mon,6);
+    const lbl = mon.getMonth()===sun.getMonth()
+      ? mon.getDate()+' – '+sun.getDate()+' '+MONTHS[sun.getMonth()]
+      : mon.getDate()+' '+MONTHS[mon.getMonth()].slice(0,4)+'. – '+sun.getDate()+' '+MONTHS[sun.getMonth()].slice(0,4)+'.';
+    document.getElementById('navLabel').textContent = lbl;
+
+    let html = '<div class="week">';
+    for(let i=0;i<7;i++){
+      const d = addDays(mon,i), s = iso(d), ph = PHASES[phaseOf(d)];
+      const tasks = tasksOn(s), astro = astroOf(d);
+      html += '<div class="day'+(s===today?' today':'')+'" style="--c:'+ph.css+'">'
+        + '<div class="band"></div>'
+        + '<div class="head"><div class="d">'+d.getDate()+'<span>'+DOW_LONG[i]+'</span></div>'
+        + '<div class="phase">'+ph.name+'</div><div class="hint">'+ph.hint+'</div>'
+        + (astro.length?'<div class="astro">'+astro.map(esc).join('<br>')+'</div>':'')
+        + '</div>'
+        + '<ul data-date="'+s+'">'+tasks.map(t=>'<li class="'+(t.done?'done':'')+'" draggable="true" data-id="'+t.id+'"><span class="handle" aria-hidden="true">⠿</span><input type="checkbox" '+(t.done?'checked':'')+' data-id="'+t.id+'" aria-label="Fait"><span class="txt">'+esc(t.text)+'</span><button class="del" data-id="'+t.id+'" aria-label="Supprimer">×</button></li>').join('')+'</ul>'
+        + '<div class="add"><input type="text" data-date="'+s+'" placeholder="Ajouter une tâche…" aria-label="Nouvelle tâche pour le '+s+'"></div>'
+        + '</div>';
+    }
+    html += '</div>';
+    main.innerHTML = html;
+    main.querySelectorAll('input[type=checkbox]').forEach(c=>c.addEventListener('change',()=>toggleTask(c.dataset.id)));
+    main.querySelectorAll('.del').forEach(b=>b.addEventListener('click',()=>deleteTask(b.dataset.id)));
+    main.querySelectorAll('.add input').forEach(inp=>inp.addEventListener('keydown',e=>{
+      if(e.key==='Enter'){ addTask(inp.dataset.date, inp.value); setTimeout(()=>{ const n=main.querySelector('.add input[data-date="'+inp.dataset.date+'"]'); if(n) n.focus(); },0); }
+    }));
+    attachDragHandlers();
+  }
+
+  // ---------- drag & drop (week view) ----------
+  let dragId = null;
+  function attachDragHandlers(){
+    main.querySelectorAll('.day li[draggable]').forEach(li=>{
+      li.addEventListener('dragstart', e=>{
+        dragId = li.dataset.id;
+        li.classList.add('dragging');
+        e.dataTransfer.effectAllowed = 'move';
+        try{ e.dataTransfer.setData('text/plain', dragId); }catch(err){}
+      });
+      li.addEventListener('dragend', ()=>{ li.classList.remove('dragging'); main.querySelectorAll('.day ul.dragover').forEach(u=>u.classList.remove('dragover')); });
+    });
+    main.querySelectorAll('.day ul').forEach(ul=>{
+      ul.addEventListener('dragover', e=>{
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        ul.classList.add('dragover');
+        const after = closestAfterElement(ul, e.clientY);
+        const dragging = main.querySelector('li.dragging');
+        if (!dragging) return;
+        if (after == null) ul.appendChild(dragging); else ul.insertBefore(dragging, after);
+      });
+      ul.addEventListener('dragleave', e=>{ if(e.target===ul) ul.classList.remove('dragover'); });
+      ul.addEventListener('drop', e=>{
+        e.preventDefault();
+        ul.classList.remove('dragover');
+        const id = dragId || e.dataTransfer.getData('text/plain');
+        if (!id) return;
+        const liAfter = [...ul.children].find(li => li.dataset.id !== id && li.getBoundingClientRect().top > (main.querySelector('li[data-id="'+id+'"]')?.getBoundingClientRect().top ?? 0));
+        // compute beforeId from current DOM order (post drag-over reposition)
+        const ids = [...ul.querySelectorAll('li')].map(li=>li.dataset.id);
+        const idx = ids.indexOf(id);
+        const beforeId = idx > -1 && idx < ids.length-1 ? ids[idx+1] : null;
+        moveTask(id, ul.dataset.date, beforeId);
+        dragId = null;
+      });
+    });
+  }
+  function closestAfterElement(ul, y){
+    const els = [...ul.querySelectorAll('li:not(.dragging)')];
+    let closest = { offset: -Infinity, el: null };
+    for (const el of els){
+      const box = el.getBoundingClientRect();
+      const offset = y - box.top - box.height/2;
+      if (offset < 0 && offset > closest.offset) closest = { offset, el };
+    }
+    return closest.el;
+  }
+
+  function esc(s){ return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+  // ---------- controls ----------
+  document.getElementById('prev').addEventListener('click',()=>{ cursor = view==='month' ? new Date(cursor.getFullYear(),cursor.getMonth()-1,1) : addDays(cursor,-7); render(); });
+  document.getElementById('next').addEventListener('click',()=>{ cursor = view==='month' ? new Date(cursor.getFullYear(),cursor.getMonth()+1,1) : addDays(cursor,7); render(); });
+  document.getElementById('todayBtn').addEventListener('click',()=>{ cursor=startOfDay(new Date()); render(); });
+  document.getElementById('viewMonth').addEventListener('click',()=>{ view='month'; render(); });
+  document.getElementById('viewWeek').addEventListener('click',()=>{ view='week'; render(); });
+
+  const settings = document.getElementById('settings');
+  document.getElementById('settingsBtn').addEventListener('click',()=>{
+    settings.classList.toggle('show');
+    document.getElementById('setStart').value = state.settings.start;
+    document.getElementById('setLen').value = state.settings.cycleLen;
+    document.getElementById('setPeriod').value = state.settings.periodLen;
+  });
+  document.getElementById('saveSettings').addEventListener('click',()=>{
+    const start = document.getElementById('setStart').value;
+    const len = Number(document.getElementById('setLen').value), per = Number(document.getElementById('setPeriod').value);
+    if(!start || len<21 || len>40 || per<2 || per>10){ setStatus('Vérifie la date et les durées (cycle 21–40 j, règles 2–10 j).'); return; }
+    state.settings = { start, cycleLen:len, periodLen:per };
+    settings.classList.remove('show'); save(); render();
+  });
+
+  load().then(render);
+})();
+</script>
+</body>
+</html>
